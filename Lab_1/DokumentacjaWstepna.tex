@@ -46,6 +46,10 @@ Przygotować obraz systemu Linux, używający ,,initramfs'' jako głównego syst
 			\item Network interface to configure through DHCP
 			\item Install timezone info
 			\item Path to the users tables
+			\item getty options 
+			\begin{itemize}
+				\item TTY port (\emph{ttyAMA0})
+			\end{itemize}
 		\end{itemize}
 		\item Filesystem images
 		\begin{itemize}
@@ -54,7 +58,9 @@ Przygotować obraz systemu Linux, używający ,,initramfs'' jako głównego syst
 		\item Packages 
 		\begin{itemize}
 			\item ntp
-			\item dhcp
+			\item ntpdate
+			\item dhcp client (domyślnie w \emph{busybox}
+			\item dropbear 
 			\item lighttpd
 		\end{itemize}
 	\end{itemize}
@@ -78,6 +84,34 @@ W celu uruchomiena sustemu na płytce, należy skopiować pliki z katalogu image
 	
 \subsection{Monitorowanie pracy użądzenia}
 Do monitorowania pracy użądzenia użyto narzędzia \emph{minicom}. Po restarcie urządzenia może okazać się konieczne ręczne urochomienie konfiguracji DHCP przez \emph{udhcpc}
+Z systemem można się równiez połączyć przez \emph{ssh}.
+
+
+\section{Konfiguracja}
+
+\begin{lstlisting}[language=bash]
+cat configs/raspberrypi_defconfig 
+BR2_arm=y
+BR2_arm1176jzf_s=y
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TARGET_GENERIC_HOSTNAME="tomasz_janiszewski"
+BR2_TARGET_GENERIC_ROOT_PASSWD="toor"
+BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
+BR2_SYSTEM_DHCP="eth0"
+BR2_TARGET_TZ_INFO=y
+BR2_TARGET_LOCALTIME="Europe/Warsaw"
+BR2_ROOTFS_USERS_TABLES="usert.tables"
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="http://alpha.mini.pw.edu.pl/~zabolotnyw/linux-c256eb9968c8997dce47350d2075e42f1b3991d3.tar.gz"
+BR2_LINUX_KERNEL_DEFCONFIG="bcmrpi_quick"
+BR2_LINUX_KERNEL_ZIMAGE=y
+BR2_PACKAGE_RPI_FIRMWARE=y
+BR2_PACKAGE_DROPBEAR=y
+BR2_PACKAGE_LIGHTTPD=y
+BR2_PACKAGE_NTP=y
+BR2_TARGET_ROOTFS_INITRAMFS=y
+\end{lstlisting}	
 
 
 
