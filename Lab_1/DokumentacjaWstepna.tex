@@ -1,0 +1,85 @@
+\input{header.tex}
+\usepackage{listings}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Opis zadania}
+Przygotować obraz systemu Linux, używający ,,initramfs'' jako głównego systemu plików.
+\begin{itemize}
+\item RPi powinno automatycznie podłączyć się do sieci, używając DHCP do otrzymania parametrów sieci
+\item System powinien mieć ustaloną nazwę jako: ,,imię nazwisko'' autora
+\item Obraz systemu powinien zawierać dodatkowe programy wskazane przez prowadzącego (powiedzmy, że na przykład chcemy, żeby był tam prosty serwer WWW udostępniający statyczne strony HTML)
+\item System powinien synchronizować czas systemowy z serwerem czasu
+\item Hasło użytkownika ,,root'' oraz hasło użytkownika domyślnego ,,default'' powinno być odpowiednio ustawione przy starcie systemu.
+\end{itemize}
+
+\section{Opis rozwiązania}
+
+\subsection{Konfiguracja \emph{buildroot}}
+\begin{enumerate}
+	\item Sklonowanie repozytorium \emph{buildroot}
+	\begin{lstlisting}[language=bash]
+	git clone git://git.buildroot.net/buildroot --depth 1
+	\end{lstlisting}
+	\item Przechodzimy do utworzonego katalogu
+	\begin{lstlisting}[language=bash]
+	cd buildroot
+	\end{lstlisting}	
+	\item Ustawiamy konfigurację dla Raspberry Pi
+	\begin{lstlisting}[language=bash]
+	make raspberrypi_defconfig
+	\end{lstlisting}	
+	\item Wypełniamy plik definiujący konto użytkownika
+	\begin{lstlisting}[language=bash]
+	echo "default -1 default -1 =password - /bin/sh - " > user.tables
+	\end{lstlisting}		
+	\item Przy pomocy \emph{make menuconfig}
+	konfigurujemy poniższe ustawienia\\
+	\begin{itemize}	
+		\item System configuration
+		\begin{itemize}
+			\item System hostname
+			\item Root password
+			\item Network interface to configure through DHCP
+			\item Install timezone info
+			\item Path to the users tables
+		\end{itemize}
+		\item Filesystem images
+		\begin{itemize}
+			\item initial RAM filesystem linked into linux kernel
+		\end{itemize}
+		\item Packages 
+		\begin{itemize}
+			\item ntp
+			\item dhcp
+			\item lighttpd
+		\end{itemize}
+	\end{itemize}
+	\item Budujemy system
+	\begin{lstlisting}[language=bash]
+	make
+	\end{lstlisting}	
+	\item Ustawiamy plik dla serwera WWW
+	\begin{lstlisting}[language=bash]
+	echo "It is working" > output/target/var/www/index.html
+	make 
+	\end{lstlisting}	
+\end{enumerate}
+
+\subsection{Uruchomienie systemu na płytce}
+W celu uruchomiena sustemu na płytce, należy skopiować pliki z katalogu images na kartę pamięci używając poniższego polecenia:
+	\begin{lstlisting}[language=bash]
+	cp output/images/rpi-firmware/* <katalog karty SD>
+	cp output/images/zImage <katalog karty SD>
+	\end{lstlisting}	
+	
+\subsection{Monitorowanie pracy użądzenia}
+Do monitorowania pracy użądzenia użyto narzędzia \emph{minicom}. Po restarcie urządzenia może okazać się konieczne ręczne urochomienie konfiguracji DHCP przez \emph{udhcpc}
+
+
+
+
+\end{document}
