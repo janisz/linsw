@@ -89,8 +89,7 @@ Z systemem można się równiez połączyć przez \emph{ssh}.
 
 \section{Konfiguracja}
 
-\begin{lstlisting}[language=bash]
-cat configs/raspberrypi_defconfig 
+\begin{lstlisting}[language=bash,caption=configs/raspberrypi\_defconfig]
 BR2_arm=y
 BR2_arm1176jzf_s=y
 BR2_TOOLCHAIN_EXTERNAL=y
@@ -114,6 +113,29 @@ BR2_TARGET_ROOTFS_INITRAMFS=y
 \end{lstlisting}	
 
 
+\begin{lstlisting}[language=bash,caption=/etc/init.d/S99start]
+#!/bin/sh
 
+start() {
+	mkdir /mnt/sdcard >> /var/log.log
+	mount /dev/mmcblk0p1 /mnt/sdcard >> /var/log.log
+	echo "Sleep"
+	sleep 3
+	udhcpc >> /var/log.log
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	*)	
+		echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"		
+esac
+\end{lstlisting}	
+
+
+\begin{lstlisting}[language=bash,caption=user.tables]
+default -1 default -1 =password - /bin/sh - 
+\end{lstlisting}	
 
 \end{document}
