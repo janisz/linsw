@@ -1,0 +1,15 @@
+start() {
+        mkdir /mnt/sdcard >> /var/log.log
+        mount /dev/mmcblk0p1 /mnt/sdcard >> /var/log.log
+        echo "Sleep"
+        sleep 3
+        udhcpc >> /var/log.log
+}
+
+case "$1" in
+         start)
+                start
+                ;;
+        *)      
+                echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"                
+esac
