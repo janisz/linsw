@@ -1,0 +1,81 @@
+\input{header.tex}
+\usepackage{listings}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Opis zadania}
+\begin{enumerate}
+\item Przygotować aplikację w języku C, obsługującą przyciski i diody LED.
+\item Aplikacja powinna reagować na zmiany stanu przycisków bez oczekiwania aktywnego
+\item Funkcjonalność aplikacji, może być ustalona przez studenta przykłady
+(można wymyślić własną, ciekawszą aplikację): stoper, z LED-ami potwierdzającymi operację i
+z możliwością pomiaru „międzyczasów” bądź zamek szyfrowy z logowaniem prób otwarcia. LED-y sygnalizują:
+otwarcie zamka, błędny kod, alarm po kilkukrotnym wprowadzeniu błędnego kodu.
+\item Przetestować korzystanie z debuggera (gdb) przy uruchamianiu aplikacji
+\item Zagadnienie dodatkowe: przygotować równoważną aplikację w wybranym języku skryptowym i porównać
+wydajność obu implementacji
+\end{enumerate}
+
+\section{Opis rozwiązania}
+
+Aplikacja to gra w kótrej gracz ma powtórzyć wylosowaną sekwencję
+świecących się diod. Przy implementacji oparto się o 
+bibliotekę \url{https://www.ridgerun.com/developer/wiki/index.php/Gpio-int-test.c}
+
+\subsection{Konfiguracja \emph{buildroota}}
+\subsubsection{Potrzebne pakiety}
+W celu uruchomienia aplikacji i mozliwości jej debugowania należy skonfigurowac poniższe opcje
+\begin{enumerate}
+\item python
+\item gdb (gdbserver)
+\end{enumerate}
+\subsubsection{Dodatkowa konfiguracja}
+W celu debugowania aplikcaji należy skonfigurowac poniższe opcje
+\begin{enumerate}
+\item \texttt{Toolchain/Build cross gdb for the host}
+\item \texttt{Build options/Build packages with debugging symbols}
+\end{enumerate}
+\subsubsection{Konfiguracja linuxa}
+W celu włączenia obsługi GPIO przez sysfs należy skonfigurować poniższe opcje
+\begin{enumerate}
+\item \texttt{Device Drivers / GPIO Support / /sys/class/gpio/... (sysfs interface)}
+\end{enumerate}
+
+
+\subsection{Aplikacja w języku \emph{C}}
+\lstinputlisting[language=c,caption=main.c]{main.c}
+\lstinputlisting[language=make,caption=Makefile]{Makefile}
+
+\subsection{Pakietyzacja aplikacji w środowisku \emph{buildroot}}
+Aby zamknac aplikacje w pakiet przygotowano poniższe pliki konfiguracyjne
+\lstinputlisting[language=make,caption=package/memo/Config.in]{Config.in}
+\lstinputlisting[language=make,caption=package/memo/memo.mk]{memo.mk}
+Oraz dodano poniższe linijki do pliku \texttt{package/Config.in}
+\begin{lstlisting}
+menu "Games" 
+        source "package/memo/Config.in" 
+endmenu
+\end{lstlisting}
+
+\subsection{Debugowanie aplikacji}
+Aby debugować aplikację na płytce nalezy uruchomić 
+\begin{lstlisting}[language=bash]
+gdbserver host:7654 memo 5
+\end{lstlisting}
+a na hoście
+\begin{lstlisting}[language=bash]
+output/host/usr/bin/arm-none-linux-gnueabi-gdb /malina/buildroot/output/build/ledkeys-1.0/keys
+\end{lstlisting}
+\begin{lstlisting}[language=bash]
+(gdb) set sysroot output/target
+(gdb) target remote xxx.yyy.zzz.vvv:7654
+\end{lstlisting}
+
+\subsection{Aplikcja w języku skryptowym}
+Aplikacja o równoważnej funckjonalności wjęzyku Python
+\lstinputlisting[language=Python,caption=memo.py]{memo.py}
+
+\end{document}

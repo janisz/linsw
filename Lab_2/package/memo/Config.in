@@ -1,0 +1,7 @@
+config BR2_PACKAGE_MEMO
+	bool "memo"
+	help
+	  Simple mmeo game
+
+
+

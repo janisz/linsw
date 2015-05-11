@@ -1,0 +1,9 @@
+config BR2_PACKAGE_WORMS
+	bool "worms"
+	depends on BR2_PACKAGE_NCURSES
+	help
+	  Game worms using ncurses
+
+	  http://www.paulgriffiths.net/program/c/curworm.php
+
+
