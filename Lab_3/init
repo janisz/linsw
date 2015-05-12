@@ -1,0 +1,50 @@
+#!/bin/sh
+
+export PATH=/env/bin
+
+global hostname
+global user
+global autoboot_timeout
+global boot.default
+global allow_color
+global linux.bootargs.base
+global linux.bootargs.console
+#linux.bootargs.dyn.* will be cleared at the beginning of boot
+global linux.bootargs.dyn.ip
+global linux.bootargs.dyn.root
+global editcmd
+
+[ -z "${global.hostname}" ] && global.hostname=generic
+[ -z "${global.user}" ] && global.user=none
+magicvar -a global.user "username (used in network filenames)"
+[ -z "${global.autoboot_timeout}" ] && global.autoboot_timeout=3
+magicvar -a global.autoboot_timeout "timeout in seconds before automatic booting"
+[ -z "${global.boot.default}" ] && global.boot.default=net
+[ -z "${global.allow_color}" ] && global.allow_color=true
+magicvar -a global.allow_color "Allow color on the console (boolean)"
+[ -z "${global.editcmd}" ] && global.editcmd=sedit
+
+[ -e /env/config-board ] && /env/config-board
+/env/config
+
+[ -n ${global.console.input_allow} ] && global.console.input_allow=1
+
+
+timeout=300
+while [ $timeout -gt 0 ]; do
+  for key in 10 22 27 ; do
+    gpio_get_value $key
+    if [ $? -eq 0 ]; then
+      echo ""
+      echo "Booting in rescue mode"
+      bootm "/boot/zImage_rescue"
+      exit
+    fi
+  done
+  msleep 10
+  let timeout--
+  echo -n .
+done
+echo
+
+bootm "/boot/zImage"
