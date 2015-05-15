@@ -7,135 +7,93 @@
 \newpage
 
 \section{Opis zadania}
-Przygotować obraz systemu Linux, używający ,,initramfs'' jako głównego systemu plików.
 \begin{itemize}
-\item RPi powinno automatycznie podłączyć się do sieci, używając DHCP do otrzymania parametrów sieci
-\item System powinien mieć ustaloną nazwę jako: ,,imię nazwisko'' autora
-\item Obraz systemu powinien zawierać dodatkowe programy wskazane przez prowadzącego (powiedzmy, że na przykład chcemy, żeby był tam prosty serwer WWW udostępniający statyczne strony HTML)
-\item System powinien synchronizować czas systemowy z serwerem czasu
-\item Hasło użytkownika ,,root'' oraz hasło użytkownika domyślnego ,,default'' powinno być odpowiednio ustawione przy starcie systemu.
+\item Przygotować ,,administracyjny'' system Linux pracujący w 
+initramfs, umożliwiający przygotowanie karty pamięci SD do 
+instalacji systemu Linux pracującego z systemem plików 
+e2fs, montowanym z partycji 2 na karcie SD
+
+\item Przygotować ,,użytkowy'' system Linux pracujący z 
+systemem plików e2fs, zawierający serwer WWW, 
+udostępniający pliki z partycji 3 na karcie SD i umożliwiający 
+wgrywanie nowych plików po podaniu hasła.
+
+\item Przygotować bootloader, umożliwiający 
+określenie (przy pomocy przycisku), który system ma zostać 
+załadowany
 \end{itemize}
 
 \section{Opis rozwiązania}
+Jako systemu ,,administracyjnego'' użyto rozwiązania z zadania 1.
+System do wgrywania plików został oparty o klasę \emph{SimpleHTTPServer}\footnote{https://docs.python.org/2/library/simplehttpserver.html},
+która jest standardową klasą języka Python. Do uruchamiania aplikacji, zarządzania
+jej logami oraz pilnowaniem aby była ciągle uruchomiona użyto \emph{supervisor}\footnote{http://supervisord.org/}.
+Jako bootloadera użyto \emph{barebox}\footnote{http://www.barebox.org/}.
+Po uruchomieniu oczekuje on 3 sekundy, na
+naciśnięcie przycisku. Jeśli w tym czasie przycisk nie został naciśnięty to
+uruchamia sie ,,użytkowy'' system operacyjny, w przciwnym przypadku
+ładuje się system ,,administracyjny''.
+Do notyfikacji o tym że układ znajduje się w fazie booloadera informuje dioda ACT
+płytk. Sterowanie diodą odbywa się za pomocą wbudowanego oprogramowania \emph{trigger}\footnote{http://wiki.barebox.org/doku.php?id=commands:trigger}
+wspieranego w \emph{Raspberry Pi} od wersji \emph{2015.04.0}\footnote{http://www.spinics.net/lists/u-boot-v2/msg21779.html}.
 
-\subsection{Konfiguracja \emph{buildroot}}
+System ,,użytkowy'' powstał w wyniku następujących zmian w konfiguracji systemu administracyjnego:
 \begin{enumerate}
-	\item Sklonowanie repozytorium \emph{buildroot}
-	\begin{lstlisting}[language=bash]
-	git clone git://git.buildroot.net/buildroot --depth 1
-	\end{lstlisting}
-	\item Przechodzimy do utworzonego katalogu
-	\begin{lstlisting}[language=bash]
-	cd buildroot
-	\end{lstlisting}	
-	\item Ustawiamy konfigurację dla Raspberry Pi
-	\begin{lstlisting}[language=bash]
-	make raspberrypi_defconfig
-	\end{lstlisting}	
-	\item Wypełniamy plik definiujący konto użytkownika
-	\begin{lstlisting}[language=bash]
-	echo "default -1 default -1 =password - /bin/sh - " > user.tables
-	\end{lstlisting}		
+	\item Sklonowanie repozytorium \emph{buildroot} i przejście na stabliną wersję
 	\item Przy pomocy \emph{make menuconfig}
 	konfigurujemy poniższe ustawienia\\
 	\begin{itemize}	
-		\item System configuration
-		\begin{itemize}
-			\item System hostname
-			\item Root password
-			\item Network interface to configure through DHCP
-			\item Install timezone info
-			\item Path to the users tables
-			\item getty options 
-			\begin{itemize}
-				\item TTY port (\emph{ttyAMA0})
-			\end{itemize}
-		\end{itemize}
+		\item System configuration $\rightarrow$ overlays \emph{overlays}
 		\item Filesystem images
 		\begin{itemize}
-			\item initial RAM filesystem linked into linux kernel
+			\item initial RAM filesystem linked into linux kernel (odznaczamy)
+			\item ext2/3/4 root filesystem
 		\end{itemize}
 		\item Packages 
 		\begin{itemize}
-			\item ntp
-			\item ntpdate
-			\item dhcp client (domyślnie w \emph{busybox}
-			\item dropbear 
-			\item lighttpd
+			\item python
+			\item supervisor
+		\end{itemize}
+		\item Bootloaders
+		\begin{itemize}
+			\item Barebox
+			\begin{itemize}
+				\item version \emph{2015.04.0}
+				\item boar defconfig \emph{rpi}
+			\end{itemize}
 		\end{itemize}
 	\end{itemize}
+	\item Przy pomocoy \emph{make barebox-menuconfig}
+	konifugurujemy poniższe ustawienia
+	\begin{itemize}
+		\item Drivers $\rightarrow$ LED Support $\rightarrow$ 
+		\begin{itemize}
+			\item gpio LED support
+			\item LED triggers support
+		\end{itemize}
+		\item Commands
+		\begin{itemize}
+			\item Boot $\rightarrow$ bootz
+			\item Hardware manipulation $\rightarrow$ trigger
+		\end{itemize}
+	\end{itemize}
+	\item Tworzymy następującą strukturę katalogów
+
+	\begin{lstlisting}[language=bash]
+mkdir -p overlays/etc/init.d
+mkdir -p var/www
+	\end{lstlisting}	
+	\lstinputlisting[caption=overlays/etc/supervisord.conf]{../overlays/etc/supervisord.conf}
+	\lstinputlisting[language=Python,caption=overlays/var/www/SimpleHTTPServerWithUpload.py]{../overlays/var/www/SimpleHTTPServerWithUpload.py}	
 	\item Budujemy system
 	\begin{lstlisting}[language=bash]
 	make
 	\end{lstlisting}	
-	\item Ustawiamy plik dla serwera WWW
-	\begin{lstlisting}[language=bash]
-	echo "It is working" > output/target/var/www/index.html
-	make 
-	\end{lstlisting}	
 \end{enumerate}
 
-\subsection{Uruchomienie systemu na płytce}
-W celu uruchomiena sustemu na płytce, należy skopiować pliki z katalogu images na kartę pamięci używając poniższego polecenia:
-	\begin{lstlisting}[language=bash]
-	cp output/images/rpi-firmware/* <katalog karty SD>
-	cp output/images/zImage <katalog karty SD>
-	\end{lstlisting}	
-	
-\subsection{Monitorowanie pracy użądzenia}
-Do monitorowania pracy użądzenia użyto narzędzia \emph{minicom}. Po restarcie urządzenia może okazać się konieczne ręczne urochomienie konfiguracji DHCP przez \emph{udhcpc}
-Z systemem można się równiez połączyć przez \emph{ssh}.
-
-
-\section{Konfiguracja}
-
-\begin{lstlisting}[language=bash,caption=configs/raspberrypi\_defconfig]
-BR2_arm=y
-BR2_arm1176jzf_s=y
-BR2_TOOLCHAIN_EXTERNAL=y
-BR2_TARGET_GENERIC_HOSTNAME="tomasz_janiszewski"
-BR2_TARGET_GENERIC_ROOT_PASSWD="toor"
-BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
-BR2_SYSTEM_DHCP="eth0"
-BR2_TARGET_TZ_INFO=y
-BR2_TARGET_LOCALTIME="Europe/Warsaw"
-BR2_ROOTFS_USERS_TABLES="usert.tables"
-BR2_LINUX_KERNEL=y
-BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
-BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="http://alpha.mini.pw.edu.pl/~zabolotnyw/linux-c256eb9968c8997dce47350d2075e42f1b3991d3.tar.gz"
-BR2_LINUX_KERNEL_DEFCONFIG="bcmrpi_quick"
-BR2_LINUX_KERNEL_ZIMAGE=y
-BR2_PACKAGE_RPI_FIRMWARE=y
-BR2_PACKAGE_DROPBEAR=y
-BR2_PACKAGE_LIGHTTPD=y
-BR2_PACKAGE_NTP=y
-BR2_TARGET_ROOTFS_INITRAMFS=y
-\end{lstlisting}	
-
-
-\begin{lstlisting}[language=bash,caption=/etc/init.d/S99start]
-#!/bin/sh
-
-start() {
-	mkdir /mnt/sdcard >> /var/log.log
-	mount /dev/mmcblk0p1 /mnt/sdcard >> /var/log.log
-	echo "Sleep"
-	sleep 3
-	udhcpc >> /var/log.log
-}
-
-case "$1" in
-	start)
-		start
-		;;
-	*)	
-		echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"		
-esac
-\end{lstlisting}	
-
-
-\begin{lstlisting}[language=bash,caption=user.tables]
-default -1 default -1 =password - /bin/sh - 
-\end{lstlisting}	
+\subsection{Konfiguracja środowiska barebox}
+Po uruchomieniu bootloadera należy użyć polecenia \emph{edit} i \emph{saveenv} aby
+zapisać ustawienia.
+\lstinputlisting[caption=/boot/bin/init]{../init}
 
 \end{document}
