@@ -1,0 +1,57 @@
+\input{header.tex}
+\usepackage{listings}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Opis zadania}
+\begin{itemize}
+\item Wykorzystując kamerę USB, proszę zrealizować system monitorujący
+obszar widziany przez kamerę. System powinien udostępniać funkcję
+zapisywania zdjęć do wybranej lokalizacji po wykryciu twarzy.
+Ostatnie zdjęcie powinno być dostępne do podglądu z poziomu
+przeglądarki.
+\end{itemize}
+
+\section{Opis rozwiązania}
+Rozwiązanie bazuje na rozwiązaniu zadania trzeciego (3) z następującymi modyfikacjami.
+Do wykrywania twarzy użyto programu w języku Python oraz biblioteki OpenCV.
+
+System powstał w wyniku następujących zmian w konfiguracji systemu z poprzedniego zadania:
+\begin{enumerate}
+	\item Nakładamy patch \url{http://patchwork.ozlabs.org/patch/341660/} \footnote{ może okazać się potrzeba edycji plików, 
+	w zależności od użytej wersji. Należy wtedy zamienić \texttt{OPT} na \texttt{OPTS}}
+	\item Przy pomocy \texttt{make menuconfig} instalujemy poniższe pakiety
+	\begin{itemize}
+		\item opencv
+		\item opencv-python
+		\item opencv-v4l support
+	\end{itemize}
+	\item Przy pomocy \texttt{make linux-menuconfig}
+	konfigurujemy poniższe ustawienia\\
+	\begin{itemize}	
+		\item Device Drivers $\rightarrow$ Multimedia support
+		\begin{itemize}
+			\item Cameras/video grabbers support
+			\item V4L platform devices
+			\item Media USB Adapters $\rightarrow$ GSPCA based webcams $\rightarrow$  ZC3XX USB Camera Driver
+		\end{itemize}
+	\end{itemize}
+	\item Tworzymy następujące pliki	
+	\lstinputlisting[caption=overlays/etc/supervisord.conf,firstline=32,firstnumber=32]{../overlays/etc/supervisord.conf}
+	\lstinputlisting[language=Python,caption=overlays/opt/Webcam-Face-Detect/webcampy.py]{../overlays/opt/Webcam-Face-Detect/webcam.py}	
+	\item Budujemy system
+	\begin{lstlisting}[language=bash]
+	make
+	\end{lstlisting}	
+\end{enumerate}
+
+\begin{thebibliography}{4}
+\bibitem{t} http://www.armadeus.com/wiki/index.php?title=OpenCV
+\bibitem{2} https://github.com/shantnu/Webcam-Face-Detect
+\bibitem{patch} http://patchwork.ozlabs.org/patch/341660/
+\end{thebibliography}
+
+\end{document}
